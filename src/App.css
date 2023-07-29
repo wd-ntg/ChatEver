@@ -1,0 +1,36 @@
+.rounded-message {
+    border-radius: 0 10px 10px 10px ;
+}
+.rounded-message-reverse {
+    border-radius: 10px 0px 10px 10px !important;
+}
+
+p {
+    max-width: max-content;
+}
+
+/* Ẩn thanh cuộn mặc định của trình duyệt */
+::-webkit-scrollbar {
+    width: 8px;
+    border-radius: 4px;
+  }
+  
+  /* Đặt màu nền cho thanh cuộn */
+  ::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+  
+  /* Đặt màu cho tiến độ của thanh cuộn */
+  ::-webkit-scrollbar-thumb {
+    background: #888;
+  }
+  
+  /* Đổi màu của tiến độ thanh cuộn khi được hover */
+  ::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+  
+  /* Dark Mode Color */
+.dark_mode {
+  background-color: rgba(0,0,0, 0.9);
+}
