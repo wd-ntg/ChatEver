@@ -4,7 +4,7 @@ import { onSnapshot, doc } from "firebase/firestore";
 import { db } from "../firebase";
 import { ChatContext } from "../context/ChatContext";
 
-const Messages = ({darkMode, isOpenModal, setIsOpenModal}) => {
+const Messages = ({ darkMode, isOpenModal, setIsOpenModal }) => {
   const { data } = useContext(ChatContext);
   const [messages, setMessages] = useState([]);
 
@@ -15,13 +15,10 @@ const Messages = ({darkMode, isOpenModal, setIsOpenModal}) => {
       doc.exists() && setMessages(doc.data().messages);
     });
 
-    return () => {  
+    return () => {
       unSub();
     };
   }, [data.chatId]);
-
-  console.log(darkMode)
-
 
   return (
     <div

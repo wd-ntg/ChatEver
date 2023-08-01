@@ -14,6 +14,7 @@ import {
 import { db, storage } from "../firebase";
 import { v4 as uuid } from "uuid";
 import { uploadBytesResumable, getDownloadURL, ref } from "firebase/storage";
+import { SocketContext } from "../context/SocketIOContext";
 
 const InputMessage = () => {
   const [text, setText] = useState("");
@@ -92,8 +93,8 @@ const InputMessage = () => {
   };
 
   const handleCloseImg = () => {
-    setImg(null)
-  }
+    setImg(null);
+  };
 
   return (
     <div className="flex items-center bg-white absolute bottom-0 w-full">
@@ -109,9 +110,14 @@ const InputMessage = () => {
           <div className="flex items-center">
             <div className="flex items-center">
               <img className="w-8 h-8" src={AddImg} />
-              <div className="ml-2 text-indigo-600 max-w-[72px] truncate">{img.name}</div>
+              <div className="ml-2 text-indigo-600 max-w-[72px] truncate">
+                {img.name}
+              </div>
             </div>
-            <div className="translate-y-[-6px] ml-2 text-indigo-300 hover:text-red-500" onClick={() => handleCloseImg()}>
+            <div
+              className="translate-y-[-6px] ml-2 text-indigo-300 hover:text-red-500"
+              onClick={() => handleCloseImg()}
+            >
               <iconify-icon icon="carbon:close-outline"></iconify-icon>
             </div>
           </div>

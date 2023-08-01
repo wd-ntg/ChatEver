@@ -6,6 +6,9 @@ import Login from "./pages/Login";
 import Home from "./pages/Home";
 import { useContext } from "react";
 import { AuthContext } from "./context/AuthContext";
+import VideoCall from "./pages/VideoCall";
+import { SocketContextProvider } from "./context/SocketIOContext";
+import { NotifyContextProvider } from "./context/NotifyContext";
 
 function App() {
   const { currentUser } = useContext(AuthContext);
@@ -14,7 +17,7 @@ function App() {
     if (!currentUser) {
       return <Navigate to="/login" />;
     }
-    return children
+    return children;
   };
 
   return (
@@ -26,8 +29,18 @@ function App() {
           path="/home"
           element={
             <ProtectedRoute>
-              <Home />
+              <NotifyContextProvider>
+                <Home />
+              </NotifyContextProvider>
             </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/videocall"
+          element={
+            <SocketContextProvider>
+              <VideoCall />
+            </SocketContextProvider>
           }
         />
         <Route path="*" element={<Navigate to="/login" />} />
