@@ -6,13 +6,13 @@ import { ChatContext } from "../context/ChatContext";
 
 const Chats = () => {
   const { currentUser } = useContext(AuthContext);
-  const { dispatch } = useContext(ChatContext);
-  const [chats, setChats] = useState([]);
+  const {data, dispatch} = useContext(ChatContext);
+  const [chats, setChats] = useState({}); // Initialize with an empty object
 
   useEffect(() => {
     const getChats = () => {
       const unsub = onSnapshot(doc(db, "userChats", currentUser.uid), (doc) => {
-        setChats(doc.data());
+        setChats(doc.data() || {}); // Use an empty object if doc.data() is null or undefined
       });
       return () => {
         unsub();

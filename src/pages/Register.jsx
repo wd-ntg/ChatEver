@@ -34,6 +34,7 @@ const Register = () => {
           email,
           password
         );
+
         const date = new Date().getTime();
         const storageRef = ref(storage, `${displayName + date}`);
 
@@ -41,7 +42,7 @@ const Register = () => {
           getDownloadURL(storageRef).then(async (downloadURL) => {
             try {
               //Update profile
-              await updateProfile(userCredential.user, {
+               await updateProfile(userCredential.user, {
                 displayName,
                 photoURL: downloadURL,
               });
@@ -57,17 +58,15 @@ const Register = () => {
               await setDoc(doc(db, "userChats", userCredential.user.uid), {});
               navigate("/home"); // Navigate to the home page after successful registration
             } catch (err) {
-              console.log(err);
+              console.log("Err ", err);
               setError(true);
               setLoading(false);
             }
           });
         });
       } catch (error) {
+        console.log("Lỗi: ", error);
         setError(true);
-        // const errorCode = error.code;
-        // const errorMessage = error.message;
-        // console.error(errorCode, errorMessage);
       }
     }
   };

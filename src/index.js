@@ -6,14 +6,17 @@ import reportWebVitals from "./reportWebVitals";
 import { AuthContextProvider } from "./context/AuthContext";
 import { ChatContextProvider } from "./context/ChatContext";
 import { SocketContextProvider } from "./context/SocketIOContext";
+import { NotifyContextProvider } from "./context/NotifyContext";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <AuthContextProvider>
     <ChatContextProvider>
+      <NotifyContextProvider>
         <React.StrictMode>
           <App />
         </React.StrictMode>
+      </NotifyContextProvider>
     </ChatContextProvider>
   </AuthContextProvider>
 );

@@ -1,11 +1,14 @@
 import React, { useEffect, useState, useContext, useRef } from "react";
 import Message from "./Message";
-import { onSnapshot, doc } from "firebase/firestore";
+import { onSnapshot, doc, collection } from "firebase/firestore";
 import { db } from "../firebase";
 import { ChatContext } from "../context/ChatContext";
+import { NotifyContext } from "../context/NotifyContext";
 
 const Messages = ({ darkMode, isOpenModal, setIsOpenModal }) => {
   const { data } = useContext(ChatContext);
+  const { notify, setNotify } = useContext(NotifyContext);
+
   const [messages, setMessages] = useState([]);
 
   const [isScrolling, setIsScrolling] = useState(false);
@@ -13,12 +16,29 @@ const Messages = ({ darkMode, isOpenModal, setIsOpenModal }) => {
   useEffect(() => {
     const unSub = onSnapshot(doc(db, "chats", data.chatId), (doc) => {
       doc.exists() && setMessages(doc.data().messages);
+      if (messages !== null) {
+        if (messages[messages.length - 1]?.text === "Chat Video") {
+          setNotify(true);
+        } else {
+          setNotify(false);
+        }
+      }
     });
 
     return () => {
       unSub();
     };
   }, [data.chatId]);
+
+//   useEffect(() => {
+//   if (messages !== null) {
+//     if (messages[messages.length - 1]?.text === "Chat Video") {
+//       setNotify(true);
+//     } else {
+//       setNotify(false);
+//     }
+//   }
+// }, [messages]);
 
   return (
     <div

@@ -5,10 +5,12 @@ import Register from "./pages/Register";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
 import { useContext } from "react";
-import { AuthContext } from "./context/AuthContext";
+import { AuthContext, AuthContextProvider } from "./context/AuthContext";
 import VideoCall from "./pages/VideoCall";
 import { SocketContextProvider } from "./context/SocketIOContext";
-import { NotifyContextProvider } from "./context/NotifyContext";
+import { NotifyContext, NotifyContextProvider } from "./context/NotifyContext";
+import { ChatContext, ChatContextProvider } from "./context/ChatContext";
+import RecevierVideoCall from './pages/ReceiverVideoCall'
 
 function App() {
   const { currentUser } = useContext(AuthContext);
@@ -29,9 +31,7 @@ function App() {
           path="/home"
           element={
             <ProtectedRoute>
-              <NotifyContextProvider>
-                <Home />
-              </NotifyContextProvider>
+              <Home />
             </ProtectedRoute>
           }
         />
@@ -39,10 +39,23 @@ function App() {
           path="/videocall"
           element={
             <SocketContextProvider>
-              <VideoCall />
+              <ProtectedRoute>
+                <VideoCall />
+              </ProtectedRoute>
             </SocketContextProvider>
           }
         />
+        <Route
+          path="/recevivercall"
+          element={
+            <SocketContextProvider>
+              <ProtectedRoute>
+                <RecevierVideoCall />
+              </ProtectedRoute>
+            </SocketContextProvider>
+          }
+        />
+
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>

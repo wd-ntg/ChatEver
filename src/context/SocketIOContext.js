@@ -6,178 +6,195 @@ import React, {
   useContext,
 } from "react";
 import { io } from "socket.io-client";
-import Peer from "simple-peer";
+// import Peer from "simple-peer";
 import { AuthContext } from "./AuthContext";
-import { ChatContext } from "./ChatContext";
-import { v4 as uuidv4 } from "uuid";
-import { useNavigate } from "react-router-dom";
+
+import SimplePeer from "simple-peer";
 
 // update ID Room
-import {
-  doc,
-  updateDoc,
-  deleteDoc,
-  getDoc
-} from "firebase/firestore";
+import { doc, updateDoc, deleteDoc, getDoc, setDoc } from "firebase/firestore";
 import { db, storage } from "../firebase";
 import { v4 as uuid } from "uuid";
 
-const SocketContext = createContext();
+export const SocketContext = createContext();
 
-const socket = io("http://localhost:5000");
+var socket = io("ws://localhost:5000", { transports: ["websocket"] });
+
+socket.on("connect", function () {
+  console.log("connected!");
+  console.log("SocketId", socket.id);
+});
+
+// socket.on('respond', function (data) {
+//   console.log(data);
+// });
 // const socket = io('https://warm-wildwood-81069.herokuapp.com');
 
-const SocketContextProvider = ({ children }) => {
-  const [callAccepted, setCallAccepted] = useState(false);
-  const [callEnded, setCallEnded] = useState(false);
-  const [stream, setStream] = useState();
-  const [name, setName] = useState("");
-  const [call, setCall] = useState({});
-  const [me, setMe] = useState("");
+export const SocketContextProvider = ({ children }) => {
+  // Caller video
 
-  const myVideo = useRef();
-  const userVideo = useRef();
-  const connectionRef = useRef();
+  const { currentUser, receiverUserId } = useContext(AuthContext);
 
-  const navigate = useNavigate()
-  const { currentUser } = useContext(AuthContext);
-  const { data } = useContext(ChatContext);
+  const [localStream, setLocalStream] = useState(null);
+  const [remoteStream, setRemoteStream] = useState(null);
+  const [peer, setPeer] = useState(null);
 
-  const IDCall = uuidv4();
+  const [call, setCall] = useState(false);
 
-  const ID = Object.entries(data);
+  const [currentSocketId, setCurrentSocketId] = useState(null);
+  const [recevierSocketId, setRecevierSetSocketId] = useState(null);
 
   useEffect(() => {
+    const socket = io("http://localhost:5000");
+
+    // Get user media
     navigator.mediaDevices
       .getUserMedia({ video: true, audio: true })
-      .then((currentStream) => {
-        setStream(currentStream);
+      .then((stream) => {
+        setLocalStream(stream);
 
-        if (myVideo.current) {
-          myVideo.current.srcObject = currentStream;
-        }
-      });
-    socket.on("me", (id) => setMe(id));
+        // Create peer connection
+        const newPeer = new SimplePeer({
+          initiator: true,
+          trickle: false,
+          stream,
+        });
+        setPeer(newPeer);
 
-    socket.on("callUser", ({ from, name: callerName, signal }) => {
-      setCall({ isReceivingCall: true, from, name: callerName, signal });
-    });
-  }, []);
+        console.log(newPeer);
 
-  const answerCall = () => {
-    setCallAccepted(true);
-
-    const peer = new Peer({ initiator: false, trickle: false, stream });
-
-    peer.on("signal", (data) => {
-      socket.emit("answerCall", { signal: data, to: call.from });
-    });
-
-    peer.on("stream", (currentStream) => {
-      userVideo.current.srcObject = currentStream;
-    });
-
-    peer.signal(call.signal);
-
-    connectionRef.current = peer;
-  };
-
-  const callUser = (id) => {
-    const peer = new Peer({ initiator: true, trickle: false, stream });
-
-    peer.on("signal", (data) => {
-      socket.emit("callUser", {
-        userToCall: id,
-        signalData: data,
-        from: me,
-        name,
-      });
-    });
-
-    peer.on("stream", (currentStream) => {
-      userVideo.current.srcObject = currentStream;
-    });
-
-    socket.on("callAccepted", (signal) => {
-      setCallAccepted(true);
-
-      peer.signal(signal);
-    });
-
-    connectionRef.current = peer;
-  };
-
-  const leaveCall = () => {
-    setCallEnded(true);
-
-    connectionRef.current.destroy();
-
-    handleDeleteRoom()
-
-    navigate('/home')
-    window.location.reload();
-  };
-
-  const updateRoom = async () => {
-    try {
-      const roomId = `${currentUser.uid}`; // Định nghĩa ID tài liệu tùy ý
-      const roomRef = doc(db, "chats", roomId); // Tạo tham chiếu đến tài liệu mới
-  
-      const roomSnapshot = await getDoc(roomRef);
-      if (roomSnapshot.exists()) {
-        const roomData = roomSnapshot.data();
-        if (roomData && roomData.messages && roomData.messages.length > 0) {
-          // Cập nhật trường text của thông báo tại messageIndex trong mảng messages
-          roomData.messages[0].text = me;
-  
-          // Sử dụng updateDoc để chỉ cập nhật một trường text trong mảng messages
-          await updateDoc(roomRef, {
-            messages: roomData.messages,
+        // Handle signaling data
+        newPeer.on("signal", (data) => {
+          console.log(data);
+          socket.emit("signal", {
+            target: recevierSocketId, // Replace with the actual target socket ID
+            signal: data,
+            caller: currentSocketId,
           });
-        }
-      }
-  
-    } catch (error) {
-      console.error("Error creating chat document:", error);
-    }
-  };
+        });
 
-  updateRoom()
+        // Handle receiving signaling data
+        socket.on("signal", (data) => {
+          console.log("Received signal:", data);
+          if (data.caller === recevierSocketId) return;
+          newPeer.signal(data.signal);
+        });
 
+        // Handle receiving streaming data
+        socket.on("stream", (stream) => {
+          setRemoteStream(stream);
+        });
+      })
+      .catch((error) => console.error(error));
 
-  const handleDeleteRoom = async () => {
-    try {
-      const roomId = `${currentUser.uid}`;
-      const roomRef = doc(db, "chats", roomId); 
-  
-      await deleteDoc(roomRef);
-  
-    } catch (error) {
-      console.error("Error deleting document:", error);
-    }
-  };
-  
+    return () => {
+      if (localStream) localStream.getTracks().forEach((track) => track.stop());
+      if (peer) peer.destroy();
+    };
+  }, [currentSocketId || recevierSocketId]);
+
+  console.log("Local", localStream);
+  console.log("Remote", remoteStream);
+
+  console.log(recevierSocketId);
+
+  // useEffect (() => {
+  //   if (currentUser) {
+  //     const roomID = currentUser.uid;
+  //     if (roomID) {
+  //       const roomRef = doc(db, "chats", roomID + "_signalC_");
+
+  //       const unsubscribe = onSnapshot(roomRef, (docSnapshot) => {
+  //         if (docSnapshot.exists()) {
+  //           setStateWindow(true)
+  //         } else {
+  //           setStateWindow(false)
+  //         }
+  //       });
+
+  //       return () => {
+  //         // Hủy đăng ký lắng nghe khi component unmount
+  //         unsubscribe();
+  //       };
+  //     }
+  //   }
+  // }, [])
+
+  const [myStream, setMyStream] = useState(null);
+  const [peers, setPeers] = useState([]);
+  const myVideoRef = useRef();
+  useEffect(() => {
+    const socket = io("http://localhost:5000");
+
+    navigator.mediaDevices
+      .getUserMedia({ video: true, audio: true })
+      .then((stream) => {
+        setMyStream(stream);
+        myVideoRef.current.srcObject = stream;
+
+        // Gửi sự kiện "join-room" với roomId đến máy chủ
+        socket.emit("join-room", roomId);
+
+        // Lắng nghe sự kiện khi có người gửi tín hiệu
+        socket.on("signal", (data) => {
+          const targetPeer = peers.find((p) => p.id === data.caller);
+          if (targetPeer) {
+            targetPeer.peer.signal(data.signal);
+          }
+        });
+
+        // Lắng nghe sự kiện khi có người gửi dữ liệu streaming
+        socket.on("stream", (data) => {
+          const peer = new SimplePeer({
+            initiator: false,
+            trickle: false,
+            stream,
+          });
+
+          setPeers((prevPeers) => [...prevPeers, { id: data.id, peer }]);
+
+          peer.signal(data.signal);
+
+          peer.on("stream", (stream) => {
+            // Hiển thị video của người nhận
+            const video = document.createElement("video");
+            video.srcObject = stream;
+            video.play();
+            document.body.appendChild(video);
+          });
+        });
+
+        // Lắng nghe sự kiện khi có người ngắt kết nối
+        socket.on("user-disconnected", (userId) => {
+          const disconnectedPeer = peers.find((p) => p.id === userId);
+          if (disconnectedPeer) {
+            disconnectedPeer.peer.destroy();
+            setPeers((prevPeers) => prevPeers.filter((p) => p.id !== userId));
+          }
+        });
+      })
+      .catch((error) => console.error("Error accessing media devices:", error));
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [roomId]);
+
   return (
     <SocketContext.Provider
       value={{
         call,
-        callAccepted,
-        myVideo,
-        userVideo,
-        stream,
-        name,
-        setName,
-        callEnded,
-        me,
-        callUser,
-        leaveCall,
-        answerCall,
-        IDCall,
+        setCall,
+        currentSocketId,
+        setCurrentSocketId,
+        recevierSocketId,
+        setRecevierSetSocketId,
+        localStream,
+        remoteStream,
+        myVideoRef
       }}
     >
       {children}
     </SocketContext.Provider>
   );
 };
-
-export { SocketContextProvider, SocketContext };
